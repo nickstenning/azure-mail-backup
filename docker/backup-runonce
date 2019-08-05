@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -eux
+
+envsubst </etc/offlineimaprc.template >/home/offlineimap/.offlineimaprc
+exec gitmail
