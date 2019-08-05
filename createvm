@@ -1,0 +1,63 @@
+#!/bin/sh
+
+set -eu
+
+if ! which az >/dev/null 2>&1; then
+  echo "error: You must have the Azure CLI installed!" >&2
+  exit 1
+fi
+
+echo "This script assumes that you have already created a resource group to " >&2
+echo "contain your resources and a managed disk to store your data." >&2
+echo >&2
+
+printf "Resource group name: " >&2
+read RESOURCE_GROUP
+
+printf "Managed disk name: " >&2
+read MANAGED_DISK
+
+echo >&2
+
+if [ "$(az group exists -g "$RESOURCE_GROUP")" != "true" ]; then
+  echo "error: The resource group '${RESOURCE_GROUP}' must already exist!" >&2
+  exit 1
+fi
+
+if ! az disk show -g "$RESOURCE_GROUP" -n "$MANAGED_DISK" >/dev/null 2>&1; then
+  echo "error: The managed disk '${MANAGED_DISK}' must already exist!" >&2
+  exit 1
+fi
+
+: ${ADMIN_SSH_KEY:=$(ssh-add -L 2>/dev/null | grep '^ssh-rsa ' | head -1)}
+if [ -z "$ADMIN_SSH_KEY" ]; then
+  echo "error: Please add an RSA key to your SSH agent, or set ADMIN_SSH_KEY to the path to the appropriate public key file." >&2
+  exit 1
+fi
+
+VM_NAME=mail-backup-$(od -vxN 2 /dev/urandom | cut -c8- | tr -d ' \n')
+echo "Will create VM '${VM_NAME}' in resource group '${RESOURCE_GROUP}' in 5 seconds..." >&2
+sleep 5
+
+echo "Creating VM... " >&2
+VM_IP=$(az vm create \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$VM_NAME" \
+  --ssh-key-values "$ADMIN_SSH_KEY" \
+  --size Standard_B2s \
+  --image UbuntuLTS \
+  --custom-data cloud-init.txt \
+  --attach-data-disks "$MANAGED_DISK" \
+  --tags role=mailbackup \
+  --output tsv \
+  --query publicIpAddress)
+
+echo "Enabling SSH to VM... " >&2
+az vm open-port \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$VM_NAME" \
+  --port 22 >/dev/null
+
+echo "Success! Now connect to the VM and check /opt/mailbackup/README." >&2
+echo >&2
+echo "  ssh $VM_IP" >&2

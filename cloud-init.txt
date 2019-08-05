@@ -1,0 +1,112 @@
+#cloud-config
+package_upgrade: true
+packages:
+  - docker.io
+
+disk_setup:
+  /dev/disk/azure/scsi1/lun0:
+    table_type: gpt
+    layout: True
+    overwrite: False
+
+fs_setup:
+  - device: /dev/disk/azure/scsi1/lun0
+    partition: 1
+    filesystem: ext4
+
+mounts:
+  - [ /dev/disk/azure/scsi1/lun0, /data ]
+
+write_files:
+  - path: /opt/mailbackup/bin/mailbackup-run
+    permissions: '0755'
+    content: |
+      #!/bin/sh
+
+      set -eu
+
+      docker pull nickstenning/mail-backup
+      exec docker run \
+        --rm \
+        --detach \
+        --net host \
+        -v /data/mail:/data \
+        -v /opt/mailbackup/etc/offlineimaprc.template:/etc/offlineimaprc.template \
+        --env-file /opt/mailbackup/etc/docker.env \
+        --log-driver syslog \
+        --log-opt tag=mailbackup \
+        nickstenning/mail-backup
+  - path: /opt/mailbackup/bin/mailbackup-checkshutdown
+    permissions: '0755'
+    content: |
+      #!/bin/sh
+
+      : ${MIN_UPTIME:=60}
+
+      set -eu
+
+      # Do nothing if we've been up less than $MIN_UPTIME
+      if [ "$(cut -d. -f1 /proc/uptime)" -lt "$MIN_UPTIME" ]; then
+        exit
+      fi
+
+      # If nothing is running, shut down.
+      if [ -z "$(docker ps -q 2>/dev/null)" ]; then
+        shutdown -h now
+      fi
+  - path: /opt/mailbackup/etc/docker.env
+    permissions: '0600'
+    content: |
+      MAIL_USER=fixme
+      MAIL_PASSWORD=fixme
+      SNITCH_URL=fixme
+  - path: /opt/mailbackup/etc/offlineimaprc.template
+    permissions: '0644'
+    content: |
+      [general]
+      metadata = /data/metadata
+      ui = Basic
+      accounts = FastMail
+      fsync = True
+
+      [Account FastMail]
+      localrepository = LocalFM
+      remoterepository = RemoteFM
+
+      [Repository LocalFM]
+      type = Maildir
+      localfolders = /data/mail/fastmail
+
+      [Repository RemoteFM]
+      type = IMAP
+      remotehost = mail.messagingengine.com
+      remoteport = 993
+      remoteuser = ${MAIL_USER}
+      remotepass = ${MAIL_PASSWORD}
+      ssl = yes
+      cert_fingerprint = bddc89dae48629898af13421d7844f806ca33943
+      holdconnectionopen = yes
+      maxconnections = 5
+      folderfilter = lambda folder: not folder.startswith('RESTORED') and folder not in ['INBOX.Junk Mail']
+  - path: /opt/mailbackup/README
+    permissions: '0644'
+    content: |
+      mail backup server
+      ------------------
+
+      On first boot, you should do the following:
+
+      1. Configure mail credentials in /opt/mailbackup/etc/docker.env.
+
+      2. Install a crontab for the admin user with the following entries:
+
+             @reboot sudo mailbackup-run
+             * * * * * sudo mailbackup-checkshutdown
+
+      3. Reboot.
+
+runcmd:
+  - ['ln', '-s', '/opt/mailbackup/bin/mailbackup-run', '/usr/bin/mailbackup-run']
+  - ['ln', '-s', '/opt/mailbackup/bin/mailbackup-checkshutdown', '/usr/bin/mailbackup-checkshutdown']
+
+# vim:ft=yaml:
