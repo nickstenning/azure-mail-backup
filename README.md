@@ -76,4 +76,4 @@ Note that you'll certainly need to edit
 ## License
 
 Everything in this repository is shared without warranty under the terms of the
-2-Clause BSD License, a copy of which is provided in `LICENSE`.
+3-Clause BSD License, a copy of which is provided in `LICENSE`.
