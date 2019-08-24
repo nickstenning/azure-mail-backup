@@ -46,6 +46,7 @@ VM_IP=$(az vm create \
   --ssh-key-values "$ADMIN_SSH_KEY" \
   --size Standard_B2s \
   --image UbuntuLTS \
+  --assign-identity \
   --custom-data cloud-init.txt \
   --attach-data-disks "$MANAGED_DISK" \
   --tags role=mailbackup \
@@ -57,6 +58,26 @@ az vm open-port \
   --resource-group "$RESOURCE_GROUP" \
   --name "$VM_NAME" \
   --port 22 >/dev/null
+
+echo "Fetching VM resource ID... " >&2
+VM_RESOURCE_ID=$(az vm show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$VM_NAME" \
+  --output tsv \
+  --query id)
+
+echo "Fetching VM identity... " >&2
+VM_IDENTITY_PRINCIPAL_ID=$(az vm identity show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$VM_NAME" \
+  --output tsv \
+  --query principalId)
+
+echo "Assigning Virtual Machine Contributor role to VM identity... " >&2
+az role assignment create \
+  --role "Virtual Machine Contributor" \
+  --assignee-object-id "$VM_IDENTITY_PRINCIPAL_ID" \
+  --scope "$VM_RESOURCE_ID" >/dev/null
 
 echo "Success! Now connect to the VM and check /opt/mailbackup/README." >&2
 echo >&2

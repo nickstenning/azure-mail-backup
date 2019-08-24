@@ -52,7 +52,15 @@ write_files:
 
       # If nothing is running, shut down.
       if [ -z "$(docker ps -q 2>/dev/null)" ]; then
-        shutdown -h now
+        RESOURCE_ID=$(curl -sSL -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2019-06-04" | grep -Eo '"resourceId":"[^"]+"' | cut -d'"' -f4)
+        TOKEN=$(curl -sSL -H Metadata:true "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-06-04&resource=https://management.azure.com/" | grep -Eo '"access_token":"[^"]+"' | cut -d'"' -f4)
+
+        curl -sSL \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -X POST \
+          -d "" \
+          -o /dev/null \
+          "https://management.azure.com${RESOURCE_ID}/deallocate?api-version=2018-06-01"
       fi
   - path: /opt/mailbackup/etc/docker.env
     permissions: '0600'
