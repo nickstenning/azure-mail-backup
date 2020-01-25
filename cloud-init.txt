@@ -92,7 +92,7 @@ write_files:
       remoteuser = ${MAIL_USER}
       remotepass = ${MAIL_PASSWORD}
       ssl = yes
-      cert_fingerprint = bddc89dae48629898af13421d7844f806ca33943
+      cert_fingerprint = c3b43678680c605062beffc6fac48d5b0623a27f448f7fa38bd0ab6f673323d4ccb6e841fb8828e4ad174070caef4cbf3a06e3ef86ae2ea605afa35ad7ef3abd
       holdconnectionopen = yes
       maxconnections = 5
       folderfilter = lambda folder: not folder.startswith('RESTORED') and folder not in ['INBOX.Junk Mail']
