@@ -57,17 +57,15 @@ Here's a rough outline of how to adapt this setup for yourself:
 1. Create a resource group and a managed disk within that resource group.
 2. Run `createvm`.
 3. Connect to the VM and follow the instructions in `/opt/mailbackup/README`.
-4. Create an Azure AD service principal, and create a secret for it.
-5. Grant that service principal "Contributor" permissions on the resource group.
+4. Set up an Azure Function App using the code in `function/`.
+5. Enable the system assigned managed identity for the function app (see the
+   "Identity" tab) and grant that identity the "Contributor" role on the
+   resource group you created in step 1.
+
    (You may be able to get away with more restrictive permissions -- it needs
    the ability to list resources in the resource group and start a VM.)
-6. Set up an Azure Function App using the code in `function/`.
-7. Configure the Function App. You'll need to set the following application settings:
-   - `SP_USERNAME` should be the service principal ID (e.g. the AAD Application ID)
-   - `SP_PASSWORD` should be the service principal secret
-   - `SP_TENANTID` should be the service principal tenant ID
-   - `VM_RESOURCE_GROUP` should be the name of the resource group in which you
-     created the VM.
+6. Configure the Function App: you'll need to set the `VM_RESOURCE_GROUP`
+   setting to the name of the resource group in which you created the VM.
 
 Note that you'll certainly need to edit
 `/opt/mailbackup/etc/offlineimaprc.template` and
