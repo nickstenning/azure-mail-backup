@@ -42,11 +42,25 @@ write_files:
       #!/bin/sh
 
       : ${MIN_UPTIME:=60}
+      : ${MAX_UPTIME:=1800}
 
       set -eu
 
+      UPTIME=$(cut -d. -f1 /proc/uptime)
+
       # Do nothing if we've been up less than $MIN_UPTIME
-      if [ "$(cut -d. -f1 /proc/uptime)" -lt "$MIN_UPTIME" ]; then
+      if [ "$UPTIME" -lt "$MIN_UPTIME" ]; then
+        exit
+      fi
+
+      # If we've been up more than $MAX_UPTIME, just shut down unconditionally.
+      #
+      # This appears to be necessary when the deallocate call succeeds but the
+      # deallocation itself gets lost within Azure. The result is that the VM
+      # itself is never shut down, but its connection to IMDS is broken so none
+      # of what follows can succeed.
+      if [ "$UPTIME" -gt "$MAX_UPTIME" ]; then
+        shutdown -h now
         exit
       fi
 
