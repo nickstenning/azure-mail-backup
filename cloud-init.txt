@@ -106,7 +106,7 @@ write_files:
       remoteuser = ${MAIL_USER}
       remotepass = ${MAIL_PASSWORD}
       ssl = yes
-      cert_fingerprint = 9c169d4858785255e299c046b9a6c3ca7caad55f93aaeac5fda3e780c04dd8869e6db326d546a3e1b47fc72c90f58a812d09b8fde463a65322ba34c6178b9cce
+      sslcacertfile = /etc/ssl/certs/ca-certificates.crt
       holdconnectionopen = yes
       maxconnections = 5
       folderfilter = lambda folder: not folder.startswith('RESTORED') and folder not in ['INBOX.Junk Mail']
