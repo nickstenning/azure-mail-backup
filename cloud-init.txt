@@ -98,6 +98,7 @@ write_files:
       [Repository LocalFM]
       type = Maildir
       localfolders = /data/mail/fastmail
+      nametrans = lambda folder: re.sub('\.', '/', re.sub('^INBOX\.', '', folder))
 
       [Repository RemoteFM]
       type = IMAP
@@ -105,11 +106,13 @@ write_files:
       remoteport = 993
       remoteuser = ${MAIL_USER}
       remotepass = ${MAIL_PASSWORD}
+      readonly = True
       ssl = yes
       sslcacertfile = /etc/ssl/certs/ca-certificates.crt
       holdconnectionopen = yes
       maxconnections = 5
-      folderfilter = lambda folder: not folder.startswith('RESTORED') and folder not in ['INBOX.Junk Mail']
+      folderfilter = lambda folder: not folder.startswith('RESTORED') and folder not in ['Junk Mail']
+      nametrans = lambda folder: 'INBOX' if folder == 'INBOX' else 'INBOX.' + re.sub('/', '.', folder)
   - path: /opt/mailbackup/README
     permissions: '0644'
     content: |
